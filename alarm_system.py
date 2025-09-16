@@ -7,10 +7,22 @@ from config import Config
 class AlarmSystem:
     def __init__(self):
         """Initialize the alarm system."""
-        pygame.mixer.init()
         self.alarm_sound_file = Config.ALARM_SOUND_FILE
         self.is_playing = False
-        self._create_default_alarm_sound()
+        self.audio_available = False
+        
+        # Try to initialize pygame mixer
+        try:
+            pygame.mixer.init()
+            self.audio_available = True
+            print("✅ Audio system initialized")
+        except pygame.error as e:
+            print(f"⚠️ Audio not available: {e}")
+            print("📢 Will use console alerts instead")
+            self.audio_available = False
+        
+        if self.audio_available:
+            self._create_default_alarm_sound()
         
     def _create_default_alarm_sound(self):
         """Create a default alarm sound if none exists."""
@@ -54,23 +66,23 @@ class AlarmSystem:
                 self.is_playing = True
                 print("🚨 HUMAN DETECTED! Playing alarm...")
                 
-                if os.path.exists(self.alarm_sound_file) and self.alarm_sound_file.endswith('.wav'):
+                if self.audio_available and os.path.exists(self.alarm_sound_file) and self.alarm_sound_file.endswith('.wav'):
                     pygame.mixer.music.load(self.alarm_sound_file)
                     pygame.mixer.music.play(-1)  # Loop indefinitely
                     time.sleep(duration)
                     pygame.mixer.music.stop()
                 else:
-                    # Fallback: system beep
-                    print("Alarm file not found, using system beep")
-                    for _ in range(duration):
-                        print("BEEP! HUMAN DETECTED!")
+                    # Fallback: console alert with visual emphasis
+                    print("📢 Using console alarm (audio not available)")
+                    for i in range(duration):
+                        print(f"🚨 ALERT: HUMAN DETECTED! 🚨 ({i+1}/{duration})")
                         time.sleep(1)
                         
             except Exception as e:
                 print(f"Error playing alarm: {e}")
                 # Fallback to console alert
-                for _ in range(duration):
-                    print("🚨 ALERT: HUMAN DETECTED! 🚨")
+                for i in range(duration):
+                    print(f"🚨 ALERT: HUMAN DETECTED! 🚨 ({i+1}/{duration})")
                     time.sleep(1)
             finally:
                 self.is_playing = False
@@ -83,7 +95,8 @@ class AlarmSystem:
     def stop_alarm(self):
         """Stop the currently playing alarm."""
         try:
-            pygame.mixer.music.stop()
+            if self.audio_available:
+                pygame.mixer.music.stop()
             self.is_playing = False
             print("Alarm stopped")
         except Exception as e:
